@@ -8,20 +8,33 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: true  # Fetch Hugo themes (true OR recursive)
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
           hugo-version: 'latest'
+          extended: true    # Enable if you're using SCSS/SASS
+
       - name: Build
-        run: hugo --minify
+        run: |
+          hugo --minify
+          ls -la public/   # Debug: List files in public directory
+
       - name: Create CNAME
-        run: echo 'leekaize.com' > public/CNAME
+        run: |
+          echo 'leekaize.com' > public/CNAME
+          cat public/CNAME  # Debug: Verify CNAME content
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
+          force_orphan: true
